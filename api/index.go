@@ -1,64 +1,23 @@
 package api
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"github.com/kkdai/youtube/v2"
 	"net/http"
 	"net/url"
 	"os"
-	"time"
-	"math/rand"
 
 	_ "github.com/joho/godotenv/autoload"
 )
 
-// Fungsi untuk memuat daftar proxy dari file
-func loadProxies(filename string) ([]string, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	var proxies []string
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		proxies = append(proxies, scanner.Text())
-	}
-	return proxies, scanner.Err()
-}
-
-// Fungsi untuk mendapatkan proxy acak dari daftar
-func getRandomProxy(proxies []string) string {
-	if len(proxies) == 0 {
-		return ""
-	}
-	rand.Seed(time.Now().UnixNano())
-	return proxies[rand.Intn(len(proxies))]
-}
-
-// Handler untuk menangani permintaan HTTP
 func Handler(w http.ResponseWriter, r *http.Request) {
-	// Muat daftar proxy dari file
-	proxies, err := loadProxies("proxy.txt")
-	if err != nil {
-		http.Error(w, "Error loading proxies: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Pilih proxy secara acak dari daftar
-	Socks5Proxy := getRandomProxy(proxies)
+	var Socks5Proxy = os.Getenv("SOCKS5_PROXY")
 
 	ytClient := youtube.Client{}
 	var client *http.Client
 	if Socks5Proxy != "" {
-		proxyURL, err := url.Parse(Socks5Proxy)
-		if err != nil {
-			http.Error(w, "Invalid proxy URL: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
+		proxyURL, _ := url.Parse(Socks5Proxy)
 		client = &http.Client{Transport: &http.Transport{
 			Proxy: http.ProxyURL(proxyURL),
 		}}
@@ -70,7 +29,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		msg := `Welcome to ytDl API
 /dl?url=<video_url> - Download a single video
 /playlist?url=<playlist_url> - Download a playlist
-
+			
 Example:
 /dl?url=https://www.youtube.com/watch?v=video_id
 /dl?url=video_id
